@@ -1,8 +1,11 @@
-Program: Program.o Philosophers.o
-	g++ -pthread Program.o Philosophers.o -o Program -lncurses
+Program: Program.o Table.o Philosopher.o
+	g++ -pthread Program.o Table.o Philosopher.o -o Program -lncurses
 
 Program.o: Program.cpp
-	g++ -pthread -c Program.cpp 
+	g++ -pthread -c Program.cpp
 
-Philosophers.o: Philosophers.cpp Philosophers.h
-	g++ -pthread -c Philosophers.cpp
+Philosopher.o: Philosopher.cpp Philosopher.h
+	g++ -pthread -c Philosopher.cpp
+
+Table.o: Table.cpp Table.h
+	g++ -pthread -c Table.cpp
