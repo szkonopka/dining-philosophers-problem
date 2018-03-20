@@ -18,12 +18,15 @@
 #define MAX_EATING_TIME 2000
 #define MIN_EATING_TIME 1000
 
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+static bool forks[5] = { false, false, false, false, false };
+
 class Philosopher {
   private:
     unsigned int identifier;
     unsigned int state;
     unsigned int cycles;
-
     static int randEatingTime() {
       return (int) (MAX_EATING_TIME ? (rand() % MAX_EATING_TIME + MIN_EATING_TIME) : MIN_EATING_TIME);
     }
@@ -45,5 +48,6 @@ class Philosopher {
       identifier = _identifier;
       state = _state;
       cycles = _cycles;
+      mutex = PTHREAD_MUTEX_INITIALIZER;
     }
 };

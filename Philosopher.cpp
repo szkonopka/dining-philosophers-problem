@@ -4,11 +4,28 @@ void Philosopher::StartPhilCycle() {
   erase();
   clear();
   for(unsigned int j = 0; j < cycles; j++) {
-    GrabForks();
-    Eat();
-    PutOutForks();
-    Think();
-    refresh();
+    if(!forks[(identifier - 1)  % 5]) {
+      forks[(identifier - 1) % 5] = true;
+      mvprintw(identifier, 0, "[%d] Philosopher grabbed left fork.\n", identifier);
+    }
+
+    if(!forks[(identifier + 1) % 5]) {
+      forks[(identifier + 1) % 5] = true;
+      mvprintw(identifier, 0, "[%d] Philosopher grabbed right fork.\n", identifier);
+    }
+
+    pthread_mutex_lock(&mutex);
+    if(forks[forks[(identifier + 1) % 5]] && forks[forks[(identifier - 1) % 5]]) {
+      GrabForks();
+      Eat();
+      PutOutForks();
+      pthread_cond_signal(&cond);
+      Think();
+    } else {
+      pthread_cond_wait(&cond, &mutex);
+      refresh();
+    }
+    pthread_mutex_unlock(&mutex);
   }
 }
 
@@ -39,6 +56,8 @@ void Philosopher::GrabForks() {
 }
 
 void Philosopher::PutOutForks() {
+  forks[(identifier + 1) % 5] = false;
+  forks[(identifier - 1) % 5] = false;
   mvprintw(identifier, 0, "[%d] Philosopher put out forks.\n", identifier);
   refresh();
   SLEEP(1000);

@@ -1,5 +1,5 @@
 Program: Program.o Table.o Philosopher.o
-	g++ -pthread Program.o Table.o Philosopher.o -o Program -lncurses
+	g++ -pthread -Wall -Wextra Program.o Table.o Philosopher.o -o Program -lncurses
 
 Program.o: Program.cpp
 	g++ -pthread -c Program.cpp
