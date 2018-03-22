@@ -1,13 +1,13 @@
 #include "Philosopher.h"
 
 void Philosopher::StartPhilCycle() {
+  erase();
+  clear();
   refresh();
   attroff( A_BOLD | A_UNDERLINE);
   for(unsigned int j = 0; j < cycles; j++) {
     Think();
-    pthread_mutex_lock(&mutex);
     GrabForks();
-    pthread_mutex_unlock(&mutex);
     Eat();
     PutOutForks();
   }
@@ -19,17 +19,12 @@ void Philosopher::StartPhilCycle() {
 void Philosopher::GrabLeftFork() {
     int retVal;
     struct timespec ts;
-    ts = get_waiting_time(20000);
+    ts = get_waiting_time(200);
+    pthread_mutex_lock(&mutex);
     while(forks[leftForkId].taken) {
-      //pthread_cond_wait(&cond, &mutex);
+      refresh_forks_state();
       retVal = pthread_cond_timedwait(&cond, &mutex, &ts);
     }
-    //mvprintw(identifier, 0, "[%d] Philosopher grabbed left fork - %d.\n", identifier, leftForkId);
-    //refresh();
-    //printf("[%d] Philosopher grabbed left fork - %d.\n", identifier, leftForkId);
-    move_and_lock(initInfoYPosition + 2, initInfoXPosition, identifier);
-    printw("RETVAL: %d", retVal);
-    refresh_and_unlock();
     move_and_lock(initInfoYPosition + 1, initInfoXPosition, identifier);
     if(retVal == ETIMEDOUT) {
       printw("TIMEOUT - PUT OUT LEFT FORK");
@@ -40,21 +35,22 @@ void Philosopher::GrabLeftFork() {
       forks[leftForkId].taken = true;
       forks[leftForkId].owner = identifier;
     }
+    pthread_cond_signal(&cond);
     refresh_and_unlock();
-    SLEEP(1000);
+    refresh_forks_state();
+    pthread_mutex_unlock(&mutex);
+    SLEEP(500);
 }
 
 void Philosopher::GrabRightFork() {
     int retVal;
     struct timespec ts;
-    ts = get_waiting_time(20000);
+    ts = get_waiting_time(200);
+    pthread_mutex_lock(&mutex);
     while(forks[rightForkId].taken) {
-      //pthread_cond_wait(&cond, &mutex);
+      refresh_forks_state();
       retVal = pthread_cond_timedwait(&cond, &mutex, &ts);
     }
-    //mvprintw(identifier, 0, "[%d] Philosopher grabbed right fork - %d.\n", identifier, rightForkId);
-    //refresh();
-    //printf("[%d] Philosopher grabbed right fork - %d.\n", identifier, rightForkId);
     move_and_lock(initInfoYPosition + 1, initInfoXPosition, identifier);
     if(retVal == ETIMEDOUT) {
       printw("TIMEOUT - PUT OUT RIGHT FORK");
@@ -65,27 +61,20 @@ void Philosopher::GrabRightFork() {
       forks[rightForkId].taken = true;
       forks[rightForkId].owner = identifier;
     }
+    pthread_cond_signal(&cond);
     refresh_and_unlock();
-    SLEEP(1000);
+    refresh_forks_state();
+    pthread_mutex_unlock(&mutex);
+    SLEEP(500);
 }
 
 void Philosopher::DisplayState() {
-  //int x, y;
-  //getyx(stdscr, y, x);
-  //move(identifier, 0);
-  //move(x, y);
   move_and_lock(initInfoYPosition, initInfoXPosition, identifier);
   switch(state) {
     case 0:
-        //mvprintw(identifier, 0, "[%d] Philosopher is HUNGRY.\n", identifier);
-        //printf("[%d] Philosopher is HUNGRY.\n", identifier);
-        //printw("Philosopher %d is HUNGRY", identifier);
         printw("HUNGRY");
       break;
     case 1:
-        //mvprintw(identifier, 0, "[%d] Philosopher is EATING.\n", identifier);
-        //printf("[%d] Philosopher is EATING.\n", identifier);
-        //printw("Philosopher %d is EATING", identifier);
         green_color();
         printw("EATING");
         move(initInfoYPosition + 1, initInfoXPosition);
@@ -93,15 +82,12 @@ void Philosopher::DisplayState() {
         release_color();
       break;
     case 2:
-        //mvprintw(identifier, 0, "[%d] Philosopher is THINKING.\n", identifier);
-        //printf("[%d] Philosopher is THINKING.\n", identifier);
         blue_color();
         printw("THINKING");
         release_color();
       break;
   }
   refresh_and_unlock();
-  //refresh();
 }
 
 void Philosopher::GrabForks() {
@@ -112,51 +98,59 @@ void Philosopher::GrabForks() {
     move_and_lock(initInfoYPosition + 1, initInfoXPosition, identifier);
     printw("GRABBED TWO FORKS");
     refresh_and_unlock();
+    refresh_forks_state();
   }
-
-  for(int i = 0; i < 5; i++) {
-    pthread_mutex_lock(&ncurses);
-    move(i, 0);
-    clrtoeol();
-    printw("Fork %d - owner: %d", i, forks[i].owner);
-    refresh();
-    pthread_mutex_unlock(&ncurses);
-  }
-  //printf("[%d] Philosopher grabbed forks.\n", identifier);
   SLEEP(1000);
 }
 
 void Philosopher::PutOutLeftFork() {
-
-}
-
-void Philosopher::PutOutRightFork() {
-
-}
-
-void Philosopher::PutOutForks() {
-  forks[rightForkId].owner = -1;
-  forks[rightForkId].taken = false;
   forks[leftForkId].owner = -1;
   forks[leftForkId].taken = false;
   move_and_lock(initInfoYPosition + 1, initInfoXPosition, identifier);
+  printw("PUT OUT LEFT FORK");
+  refresh_and_unlock();
+  refresh_forks_state();
+}
+
+void Philosopher::PutOutRightFork() {
+  forks[rightForkId].owner = -1;
+  forks[rightForkId].taken = false;
+  move_and_lock(initInfoYPosition + 1, initInfoXPosition, identifier);
+  printw("PUT OUT RIGHT FORK");
+  refresh_and_unlock();
+  refresh_forks_state();
+}
+
+void Philosopher::PutOutForks() {
+  PutOutRightFork();
+  pthread_cond_signal(&cond);
+
+  PutOutLeftFork();
+  pthread_cond_signal(&cond);
+
+  move_and_lock(initInfoYPosition + 1, initInfoXPosition, identifier);
   printw("PUT OUT FORKS");
   refresh_and_unlock();
-  //printf("[%d] Philosopher put out forks.\n", identifier);
-  pthread_cond_broadcast(&cond);
+  refresh_forks_state();
+  pthread_cond_signal(&cond);
   SLEEP(1000);
 }
 
 void Philosopher::Eat() {
-  state = 1;
-  DisplayState();
-  for(int i = 0; i <= 5; i++) {
-    move_and_lock(initInfoYPosition + 1, initInfoXPosition, identifier);
-    green_color();
-    printw("%d %% - [%s%s]", i * 20, std::string(i, '=').c_str(), std::string(5 - i, ' ').c_str());
-    release_color();
-    refresh_and_unlock();
-    SLEEP(randEatingTime());
+  if(forks[rightForkId].owner == identifier &&
+     forks[leftForkId].owner == identifier &&
+     forks[leftForkId].taken &&
+     forks[rightForkId].taken) {
+    state = 1;
+    DisplayState();
+    for(int i = 0; i <= 5; i++) {
+      move_and_lock(initInfoYPosition + 1, initInfoXPosition, identifier);
+      green_color();
+      printw("%d %% - [%s%s]", i * 20, std::string(i, '=').c_str(), std::string(5 - i, ' ').c_str());
+      release_color();
+      refresh_and_unlock();
+      SLEEP(randEatingTime());
+    }
   }
 }
 
@@ -164,8 +158,8 @@ void Philosopher::Think() {
   state = 2;
   DisplayState();
   SLEEP(randThinkingTime());
-  //state = 0;
-  //DisplayState();
+  state = 0;
+  DisplayState();
 }
 
 int Philosopher::GetIdentifier() {

@@ -16,10 +16,10 @@
 # define SLEEP(x) Sleep(x)
 #endif
 
-#define MAX_THINKING_TIME 2000
-#define MIN_THINKING_TIME 1000
-#define MAX_EATING_TIME 4000
-#define MIN_EATING_TIME 1000
+#define MAX_THINKING_TIME 5000
+#define MIN_THINKING_TIME 2000
+#define MAX_EATING_TIME 500
+#define MIN_EATING_TIME 100
 
 struct Fork{
   bool taken;
@@ -29,7 +29,7 @@ struct Fork{
 static pthread_mutex_t ncurses = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
-static Fork forks[] = { };
+static Fork forks[] = { { false, -1 }, { false, -1 }, { false, -1 }, { false, -1 }, { false, -1 } };
 
 class Philosopher {
   private:
@@ -48,12 +48,14 @@ class Philosopher {
     }
 
     static void refresh_labels(int i) {
-      move(i * 4 + 1 + 5, 0);
+      //pthread_mutex_lock(&ncurses);
+      move(i * 5 + 1 + 5, 0);
       clrtoeol();
       attron(A_BOLD | A_UNDERLINE);
       printw("[%d]. philosopher:", i);
       refresh();
       attroff(A_BOLD | A_UNDERLINE);
+      //pthread_mutex_unlock(&ncurses);
     }
 
     static void move_and_lock(int y, int x, int i) {
@@ -93,6 +95,17 @@ class Philosopher {
 
     static void release_color() {
       attroff(COLOR_PAIR(1));
+    }
+
+    static void refresh_forks_state() {
+      for(int i = 0; i < 5; i++) {
+        pthread_mutex_lock(&ncurses);
+        move(i, 0);
+        clrtoeol();
+        printw("Fork %d - owner: %d", i, forks[i].owner);
+        refresh();
+        pthread_mutex_unlock(&ncurses);
+      }
     }
   public:
     void DisplayState();

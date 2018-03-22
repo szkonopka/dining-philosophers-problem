@@ -4,7 +4,7 @@ static void draw_philosopher(int i, int amount) {
   int row, col;
   getmaxyx(stdscr, row, col);
   col = 0;
-  move(i * 4 + 1 + amount, col);
+  move(i * 5 + 2 + amount, col);
   clrtoeol();
   attron( A_BOLD | A_UNDERLINE );
   printw("[%d]. philosopher:", i);
@@ -20,7 +20,7 @@ void Table::Run() {
   int row, col;
   getmaxyx(stdscr, row, col);
   for(int i = 0; i < this->philsNumber; i++) {
-    phils[i] = new Philosopher(i, 1, 2, 0, i * 4 + 2 + philsNumber);
+    phils[i] = new Philosopher(i, 1, 5, 0, i * 5 + 2 + philsNumber);
     draw_philosopher(i, philsNumber);
     int result = pthread_create(&philThreads[i], NULL, (THREADFUNCPTR) &Philosopher::StartPhilCycle, phils[i]);
     if(result != 0) {
